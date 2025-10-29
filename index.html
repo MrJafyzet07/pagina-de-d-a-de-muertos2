@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Día de Muertos - La Catrina</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: #1a1a2e; color: #fff; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; margin-bottom: 30px; }
+        h1 { color: #ffcc00; font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { color: #ffcc00; margin: 20px 0; }
+        p { margin-bottom: 15px; line-height: 1.5; }
+        .game-container { background: #2d2d44; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .game-info { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        #gameCanvas { background: #0f0f1a; display: block; margin: 0 auto; border: 2px solid #8B0000; }
+        button { background: #ffcc00; color: #8B0000; border: none; padding: 10px 20px; margin: 10px 5px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .instructions { background: #1a1a2e; padding: 15px; border-radius: 5px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Día de Muertos</h1>
+            <p>Tradiciones Mexicanas y La Catrina</p>
+        </header>
+        
+        <section>
+            <h2>Origen del Día de Muertos</h2>
+            <p>El Día de Muertos tiene sus raíces en las culturas mesoamericanas que realizaban rituales dedicados a sus ancestros, mezclándose posteriormente con tradiciones católicas.</p>
+        </section>
+        
+        <section>
+            <h2>La Catrina</h2>
+            <p>Creada por José Guadalupe Posada como "La Calavera Garbancera", La Catrina es un símbolo que representa que la muerte es democrática y nos llega a todos.</p>
+        </section>
+        
+        <section class="game-container">
+            <h2>Minijuego: Huir con La Catrina</h2>
+            <div class="game-info">
+                <div>Velocidad: <span id="speed">5</span></div>
+                <div>Distancia: <span id="distance">0</span></div>
+                <div>Vidas: <span id="lives">3</span></div>
+            </div>
+            <canvas id="gameCanvas" width="750" height="400"></canvas>
+            <div>
+                <button id="startBtn">Comenzar</button>
+                <button id="resetBtn">Reiniciar</button>
+            </div>
+            <div class="instructions">
+                <p>Usa las flechas ← → para mover a La Catrina. Evita los obstáculos para aumentar velocidad. Si chocas, pierdes velocidad y vidas.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Variables del juego
+        let canvas, ctx, gameRunning = false, animationId;
+        const player = { x: 50, y: 200, width: 40, height: 60, speed: 5, color: '#ffcc00' };
+        let obstacles = [];
+        const obstacleTypes = [
+            { width: 40, height: 40, color: '#8B0000' },
+            { width: 60, height: 40, color: '#4a0000' },
+            { width: 30, height: 50, color: '#5d4037' }
+        ];
+        let gameStats = { distance: 0, lives: 3, speed: 5, obstacleFrequency: 120, frames: 0 };
+
+        // Inicializar juego
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            document.addEventListener('keydown', (e) => {
+                if (!gameRunning) return;
+                if (e.key === 'ArrowLeft' && player.x > player.width/2) player.x -= player.speed;
+                if (e.key === 'ArrowRight' && player.x < canvas.width - player.width/2) player.x += player.speed;
+            });
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            document.getElementById('resetBtn').addEventListener('click', resetGame);
+            drawInitialScreen();
+        }
+
+        // Pantalla inicial
+        function drawInitialScreen() {
+            ctx.fillStyle = '#0f0f1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffcc00';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Huir con La Catrina', canvas.width/2, 80);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '18px Arial';
+            ctx.fillText('Usa las flechas para moverte', canvas.width/2, 150);
+            drawCatrina(canvas.width/2, 280, 60, 80);
+        }
+
+        // Dibujar La Catrina
+        function drawCatrina(x, y, w, h) {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(x - w/2, y - h/2, w, h);
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(x, y - h/2 - 10, w/1.5, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(x - w/4, y - h/4, 5, 0, Math.PI * 2);
+            ctx.arc(x + w/4, y - h/4, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, w/3, 0, Math.PI, false);
+            ctx.stroke();
+        }
+
+        // Iniciar juego
+        function startGame() {
+            if (gameRunning) return;
+            gameRunning = true;
+            obstacles = [];
+            gameStats = { distance: 0, lives: 3, speed: 5, obstacleFrequency: 120, frames: 0 };
+            player.speed = 5;
+            player.x = 50;
+            updateGameStats();
+            gameLoop();
+        }
+
+        // Reiniciar juego
+        function resetGame() {
+            cancelAnimationFrame(animationId);
+            gameRunning = false;
+            drawInitialScreen();
+        }
+
+        // Bucle principal
+        function gameLoop() {
+            if (!gameRunning) return;
+            ctx.fillStyle = '#0f0f1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            gameStats.frames++;
+            gameStats.distance += Math.floor(player.speed / 2);
+            if (gameStats.frames % gameStats.obstacleFrequency === 0) generateObstacle();
+            updateObstacles();
+            drawCatrina(player.x, player.y, player.width, player.height);
+            checkCollisions();
+            updateGameStats();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Generar obstáculos
+        function generateObstacle() {
+            const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - type.height - 10,
+                width: type.width,
+                height: type.height,
+                color: type.color,
+                speed: player.speed / 2 + Math.random() * 2
+            });
+            if (gameStats.obstacleFrequency > 60) gameStats.obstacleFrequency -= 0.5;
+        }
+
+        // Actualizar obstáculos
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const o = obstacles[i];
+                o.x -= o.speed;
+                ctx.fillStyle = o.color;
+                ctx.fillRect(o.x, o.y, o.width, o.height);
+                if (o.x + o.width < 0) {
+                    obstacles.splice(i, 1);
+                    if (player.speed < 15) {
+                        player.speed += 0.2;
+                        gameStats.speed = Math.floor(player.speed);
+                    }
+                }
+            }
+        }
+
+        // Verificar colisiones
+        function checkCollisions() {
+            for (let i = 0; i < obstacles.length; i++) {
+                const o = obstacles[i];
+                if (player.x < o.x + o.width && player.x + player.width/2 > o.x &&
+                    player.y < o.y + o.height && player.y + player.height/2 > o.y) {
+                    if (player.speed > 3) player.speed -= 2;
+                    gameStats.speed = Math.floor(player.speed);
+                    gameStats.lives--;
+                    obstacles.splice(i, 1);
+                    if (gameStats.lives <= 0) endGame();
+                    break;
+                }
+            }
+        }
+
+        // Finalizar juego
+        function endGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationId);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffcc00';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('¡Fin del Juego!', canvas.width/2, canvas.height/2 - 30);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '24px Arial';
+            ctx.fillText(`Distancia: ${gameStats.distance}`, canvas.width/2, canvas.height/2 + 20);
+        }
+
+        // Actualizar estadísticas
+        function updateGameStats() {
+            document.getElementById('speed').textContent = gameStats.speed;
+            document.getElementById('distance').textContent = gameStats.distance;
+            document.getElementById('lives').textContent = gameStats.lives;
+        }
+
+        // Iniciar cuando se carga la página
+        window.onload = init;
+    </script>
+</body>
+</html>
