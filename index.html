@@ -17,6 +17,22 @@
         #gameCanvas { background: #0f0f1a; display: block; margin: 0 auto; border: 2px solid #8B0000; }
         button { background: #ffcc00; color: #8B0000; border: none; padding: 10px 20px; margin: 10px 5px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .instructions { background: #1a1a2e; padding: 15px; border-radius: 5px; margin-top: 15px; }
+        
+        /* Estilos para el formulario */
+        .form-container { background: #2d2d44; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #ffcc00; }
+        input, select, textarea { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #8B0000; background: #1a1a2e; color: #fff; }
+        textarea { height: 100px; resize: vertical; }
+        .rating { display: flex; justify-content: space-between; margin: 10px 0; }
+        .rating input { display: none; }
+        .rating label { font-size: 24px; cursor: pointer; color: #555; }
+        .rating input:checked ~ label { color: #ffcc00; }
+        .rating label:hover, .rating label:hover ~ label { color: #ffcc00; }
+        .btn-group { display: flex; justify-content: space-between; }
+        .btn-group button { width: 48%; }
+        .success-message { background: #4CAF50; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; display: none; }
+        .error-message { background: #f44336; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -52,6 +68,76 @@
                 <p>Usa las flechas ← → para mover a La Catrina. Evita los obstáculos para aumentar velocidad. Si chocas, pierdes velocidad y vidas.</p>
             </div>
         </section>
+        
+        <!-- Formulario de Satisfacción -->
+        <section class="form-container">
+            <h2>Formulario de Satisfacción</h2>
+            <p>¡Ayúdanos a mejorar! Por favor, comparte tu opinión sobre nuestra página del Día de Muertos.</p>
+            
+            <form id="satisfactionForm">
+                <div class="form-group">
+                    <label for="name">Nombre:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Correo electrónico:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>¿Cómo calificarías tu experiencia en nuestra página?</label>
+                    <div class="rating">
+                        <input type="radio" id="star5" name="rating" value="5">
+                        <label for="star5">★</label>
+                        <input type="radio" id="star4" name="rating" value="4">
+                        <label for="star4">★</label>
+                        <input type="radio" id="star3" name="rating" value="3">
+                        <label for="star3">★</label>
+                        <input type="radio" id="star2" name="rating" value="2">
+                        <label for="star2">★</label>
+                        <input type="radio" id="star1" name="rating" value="1">
+                        <label for="star1">★</label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">¿Qué te pareció más interesante?</label>
+                    <select id="category" name="category" required>
+                        <option value="">Selecciona una opción</option>
+                        <option value="historia">Información histórica</option>
+                        <option value="catrina">La Catrina</option>
+                        <option value="juego">El minijuego</option>
+                        <option value="todo">Todo en general</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="comments">Comentarios adicionales:</label>
+                    <textarea id="comments" name="comments" placeholder="Comparte cualquier sugerencia o comentario adicional..."></textarea>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="submit" id="submitBtn">Enviar Comentarios</button>
+                    <button type="button" id="viewCommentsBtn">Ver Comentarios Anteriores</button>
+                </div>
+            </form>
+            
+            <div id="successMessage" class="success-message">
+                ¡Gracias por tus comentarios! Tu opinión ha sido registrada.
+            </div>
+            
+            <div id="errorMessage" class="error-message">
+                Ha ocurrido un error al enviar tus comentarios. Por favor, inténtalo de nuevo.
+            </div>
+        </section>
+        
+        <!-- Sección para mostrar comentarios anteriores -->
+        <section id="commentsSection" class="form-container" style="display: none;">
+            <h2>Comentarios Anteriores</h2>
+            <div id="commentsList"></div>
+            <button id="backToFormBtn">Volver al Formulario</button>
+        </section>
     </div>
 
     <script>
@@ -78,6 +164,9 @@
             document.getElementById('startBtn').addEventListener('click', startGame);
             document.getElementById('resetBtn').addEventListener('click', resetGame);
             drawInitialScreen();
+            
+            // Inicializar formulario
+            initForm();
         }
 
         // Pantalla inicial
@@ -213,6 +302,112 @@
             document.getElementById('speed').textContent = gameStats.speed;
             document.getElementById('distance').textContent = gameStats.distance;
             document.getElementById('lives').textContent = gameStats.lives;
+        }
+
+        // Funciones para el formulario de satisfacción
+        function initForm() {
+            const form = document.getElementById('satisfactionForm');
+            const viewCommentsBtn = document.getElementById('viewCommentsBtn');
+            const backToFormBtn = document.getElementById('backToFormBtn');
+            
+            form.addEventListener('submit', handleFormSubmit);
+            viewCommentsBtn.addEventListener('click', showPreviousComments);
+            backToFormBtn.addEventListener('click', () => {
+                document.getElementById('commentsSection').style.display = 'none';
+                document.querySelector('.form-container').style.display = 'block';
+            });
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                rating: document.querySelector('input[name="rating"]:checked').value,
+                category: document.getElementById('category').value,
+                comments: document.getElementById('comments').value,
+                date: new Date().toLocaleString()
+            };
+            
+            // Guardar en base de datos local (localStorage)
+            saveToLocalStorage(formData);
+            
+            // Enviar por correo (simulado)
+            sendEmail(formData);
+            
+            // Mostrar mensaje de éxito
+            document.getElementById('successMessage').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            // Limpiar formulario
+            document.getElementById('satisfactionForm').reset();
+            
+            // Ocultar mensaje después de 5 segundos
+            setTimeout(() => {
+                document.getElementById('successMessage').style.display = 'none';
+            }, 5000);
+        }
+
+        function saveToLocalStorage(data) {
+            let comments = JSON.parse(localStorage.getItem('diaMuertosComments') || '[]');
+            comments.push(data);
+            localStorage.setItem('diaMuertosComments', JSON.stringify(comments));
+        }
+
+        function sendEmail(data) {
+            // En un entorno real, aquí se enviaría una petición a un servidor
+            // que maneje el envío de correos electrónicos
+            console.log('Enviando comentarios por correo:', data);
+            
+            // Simulación de envío de correo
+            // En un caso real, usarías fetch() o XMLHttpRequest para enviar los datos a tu servidor
+            // que luego enviaría el correo usando un servicio como SendGrid, Mailgun, etc.
+            
+            // Ejemplo de cómo sería con fetch (descomenta y adapta para tu caso):
+            /*
+            fetch('tu-servidor-para-enviar-correo.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Correo enviado:', result);
+            })
+            .catch(error => {
+                console.error('Error al enviar correo:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('successMessage').style.display = 'none';
+            });
+            */
+        }
+
+        function showPreviousComments() {
+            const comments = JSON.parse(localStorage.getItem('diaMuertosComments') || '[]');
+            const commentsList = document.getElementById('commentsList');
+            
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<p>No hay comentarios anteriores.</p>';
+            } else {
+                let html = '';
+                comments.forEach(comment => {
+                    html += `
+                        <div style="border-bottom: 1px solid #444; padding: 10px 0;">
+                            <p><strong>${comment.name}</strong> (${comment.email}) - ${comment.date}</p>
+                            <p>Calificación: ${'★'.repeat(comment.rating)}${'☆'.repeat(5-comment.rating)}</p>
+                            <p>Interés: ${comment.category}</p>
+                            <p>${comment.comments || 'Sin comentarios adicionales'}</p>
+                        </div>
+                    `;
+                });
+                commentsList.innerHTML = html;
+            }
+            
+            document.querySelector('.form-container').style.display = 'none';
+            document.getElementById('commentsSection').style.display = 'block';
         }
 
         // Iniciar cuando se carga la página
